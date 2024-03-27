@@ -1,44 +1,63 @@
 package Checkers;
 
 import java.awt.Color;
-import java.awt.FlowLayout;
 import java.awt.Graphics;
-import java.awt.Point;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
 
 import javax.swing.*;
 
 public class piece {
 
     public static void main(String args[]) {
-        
+        return;
     }
 
     public static class Piece {
         
         private static final int RADIUS = 40;
-        //color1 is for player 1 pieces, color2 for player 2
-        private static final Color color1 = Color.GREEN;
-        private static final Color color2 = Color.RED;
+        //COLOR1 is for player 1 pieces, COLOR2 for player 2
+        private static final Color COLOR1 = Color.GREEN;
+        private static final Color COLOR2 = Color.RED;
 
         private int player;
         private CircleButton shape;
-        private int position;
+
+        //position is index on board: position / 8 = row; position % 8 = col
+        //once board uses prevPosition, reset it to currPosition
+        private int currPosition;
+        private int prevPosition;
+
+        //add list that says which spaces piece can move to using 1 move
+        //items in arr will be offset of space based off curr position:
+            //ex, piece on 50, item in arr is -8, piece can move to 50 - 8 = 42 (row = 42 / 8, col = 42 % 8)
         
+        private ArrayList<Integer> moveList;
+
+        /*
+         * CONSTRUCTORS
+         */
         //create the piece based on the player piece is for
-        public Piece(int player) {
+        public Piece(int player, int position) {
             this.player = player;
             this.shape = createCircle(player, 50, 50);
+            this.currPosition = position;
+            this.prevPosition = position;
+            this.moveList = new ArrayList<>();
         }
+
+        /*
+         * PRIVATE METHODS
+         */
 
         //create the circle based on which player piece is for
         private CircleButton createCircle(int player, int xCoord, int yCoord) {
             Color colorOfPiece;
             if (player == 1) {
-                colorOfPiece = color1;
+                colorOfPiece = COLOR1;
             } else {
-                colorOfPiece = color2;
+                colorOfPiece = COLOR2;
             }
             CircleButton circle = new CircleButton(xCoord, yCoord, RADIUS, colorOfPiece);
             circle.setOpaque(false);
@@ -49,17 +68,18 @@ public class piece {
         }
 
         private void addMouseEventListener(CircleButton circle) {
+            
             circle.addMouseMotionListener(new MouseAdapter() {
 
                 @Override
                 public void mouseDragged(MouseEvent e) {
                     //to drag pieces
-                    Point newLocation = e.getLocationOnScreen();
                     int newXCoord = e.getX() + circle.getX() - 50;
                     int newYCoord = e.getY() + circle.getY() - 50;
                     circle.setBounds(newXCoord, newYCoord, 100, 100);
                 }
             });
+
             circle.addMouseListener(new MouseAdapter() {
                 
                 private int startXCoord;
@@ -90,8 +110,9 @@ public class piece {
                     boolean yChangeCorrect = false;
                     
                     //Check which player piece is for
-                    //for p1: move should be downwards, so y must be getting bigger. if yChange > 50 && < 200, valid move
+                    //for p1: move should be downwards, so y must be getting bigger. if yChange > 50 && < 150, valid move
                     //if piece is at last square (y == 700), then can move backwards, so check is same as normal check for other player
+                    //same thing but opposite for p2
                     
                     if (startYCoord >= 700 || player == 2) {
                         yChange = -100;
@@ -107,12 +128,17 @@ public class piece {
                     
                     if ((xDiff > -50 && xDiff < 50) && (yChangeCorrect)) {
                         circle.setBounds(startXCoord, startYCoord + yChange, 100, 100);
+                        //change position of piece
                     } else {
                         circle.setBounds(startXCoord, startYCoord, 100, 100);
                     }
                 }
             });
         }
+
+        /*
+         * PUBLIC METHODS
+         */
 
         //return color of piece
         public int getPlayer() {
@@ -124,6 +150,33 @@ public class piece {
             return this.shape;
         }
 
+        //returns int list of prevPosition[0] and currPosition[1]
+        public int[] getPositionList() {
+            int[] retArr = new int[2];
+            retArr[0] = this.prevPosition;
+            retArr[1] = this.currPosition;
+            return retArr;
+        }
+
+        //sets prevPosition to currPosition
+        //to be used after board makes its adjustments due to position change to stop it from flagging a change
+        public void setPositionToCurrent() {
+            this.prevPosition = this.currPosition;
+        }
+
+        //add move to moveList
+        public void addToMoveList(int spaceCanMoveTo) {
+            this.moveList.add(spaceCanMoveTo);
+        }
+
+        public void clearMoveList() {
+            this.moveList.clear();
+        }
+
+
+        /*
+         * PRIVATE CLASSES
+         */
         private class CircleButton extends JButton {
 
             private int x, y, radius;
@@ -137,7 +190,7 @@ public class piece {
             }
 
             public int getPlayer() {
-                if (playerColor.equals(color1)) {
+                if (playerColor.equals(COLOR1)) {
                     return 1;
                 } else {
                     return 2;

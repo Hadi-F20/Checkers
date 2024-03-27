@@ -8,7 +8,6 @@ package Checkers;
  */
 
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.GridLayout;
 import javax.swing.*;
 import Checkers.piece.Piece;
@@ -18,7 +17,7 @@ public class board {
     public static void main(String args[]) {
         Board gameBoard = new Board();
         while (true) {
-            gameBoard.checkPieceMovement();
+            gameBoard.checkPieceCollision();
         }
     }
     public static class Board {
@@ -28,7 +27,7 @@ public class board {
         private final int PANEL_WIDTH = 800;
         private final int PANEL_HEIGHT = 800;
 
-        private int[][] currBoardState;
+        private Piece[][] currBoardState;
         private JFrame frame;
         private JPanel[][] boardSquares;
         private JLayeredPane frameBackground;
@@ -40,7 +39,7 @@ public class board {
         private void initializeBoard() {
             //initialize board with JButtons as the squares of the board
             //board state start is first 2 rows as 1 to indicate white and last 2 rows as 2 to indicate red
-            currBoardState = new int[8][8];
+            currBoardState = new Piece[8][8];
             boardSquares = new JPanel[8][8];
             frame = new JFrame("Checkers");
             frameBackground = new JLayeredPane();
@@ -60,12 +59,12 @@ public class board {
                         boardSquares[i][j].setBackground(Color.BLACK);
                     }
                     if (i < 2) {
-                        newPiece = new Piece(1);
-                        currBoardState[i][j] = 1;
+                        newPiece = new Piece(1, i + j);
+                        currBoardState[i][j] = newPiece;
                         frameBackground.add(newPiece.getCircle(), JLayeredPane.DEFAULT_LAYER);
                     } else if (i > 5) {
-                        newPiece = new Piece(2);
-                        currBoardState[i][j] = 2;
+                        newPiece = new Piece(2, i + j);
+                        currBoardState[i][j] = newPiece;
                         frameBackground.add(newPiece.getCircle(), JLayeredPane.DEFAULT_LAYER);
                     } else {
                         //placeholder pieces to split gridlayout to correct order
@@ -89,10 +88,11 @@ public class board {
             frame.setVisible(true);
         }
 
-        //Check if piece has moved to another square, if it did then redraw in that panel
-        //if not then place back in its original position so that it doesnt look weird
-        public void checkPieceMovement() {
-            
+        //Check if piece move caused in to move over other players piece
+        public void checkPieceCollision() {
+            //if piece moved, see if there is enemy piece between prev position and new position
+            //if so delete enemy piece
+            //if piece can go over another enemy let player move again
         }
     }
 }
