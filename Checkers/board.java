@@ -14,10 +14,26 @@ import Checkers.piece.Piece;
 
 public class board {
 
+    private static Board gameBoard;
+    private static int movedPiecePosition;
+    private static Integer movedPieceOldPosition;
+
     public static void main(String args[]) {
-        Board gameBoard = new Board();
+        gameBoard = new Board();
         while (true) {
-            gameBoard.checkPieceCollision();
+            //loop through boardState to check collisions
+            Piece[][] boardState = gameBoard.getBoardState();
+            //need to get piece from original position
+            if ( movedPieceOldPosition != null) {
+                int pieceNewRow = movedPiecePosition / 8;
+                int pieceNewCol = movedPiecePosition % 8;
+                int pieceOldRow = movedPieceOldPosition / 8;
+                int pieceOldCol = movedPieceOldPosition % 8;
+                Piece movedPiece = boardState[pieceOldRow][pieceOldCol];
+                gameBoard.checkPieceCollision(movedPiece);
+                gameBoard.updateBoard(pieceNewRow, pieceNewCol, pieceOldRow, pieceOldCol, movedPiece);
+            }
+            
         }
     }
     public static class Board {
@@ -31,6 +47,7 @@ public class board {
         private JFrame frame;
         private JPanel[][] boardSquares;
         private JLayeredPane frameBackground;
+        
         
         public Board() {
             initializeBoard();
@@ -59,11 +76,12 @@ public class board {
                         boardSquares[i][j].setBackground(Color.BLACK);
                     }
                     if (i < 2) {
-                        newPiece = new Piece(1, i + j);
+                        //Constructor, new Piece(player, position)
+                        newPiece = new Piece(1, (i * 8) + j);
                         currBoardState[i][j] = newPiece;
                         frameBackground.add(newPiece.getCircle(), JLayeredPane.DEFAULT_LAYER);
                     } else if (i > 5) {
-                        newPiece = new Piece(2, i + j);
+                        newPiece = new Piece(2, (i * 8) + j);
                         currBoardState[i][j] = newPiece;
                         frameBackground.add(newPiece.getCircle(), JLayeredPane.DEFAULT_LAYER);
                     } else {
@@ -89,10 +107,42 @@ public class board {
         }
 
         //Check if piece move caused in to move over other players piece
-        public void checkPieceCollision() {
+        private void checkPieceCollision(Piece movedPiece) {
             //if piece moved, see if there is enemy piece between prev position and new position
             //if so delete enemy piece
             //if piece can go over another enemy let player move again
+            int[] positions = movedPiece.getPositionList();
+            int prevPosition = positions[0];
+            int currPosition = positions[1];
+            if (Math.abs((currPosition / 8) - (prevPosition / 8)) == 1) {
+                System.out.println("yes");
+            }
+
         }
+
+        public Piece[][] getBoardState() {
+            return this.currBoardState;
+        }
+
+        //take a position, move piece in that position to new position
+        public void updateBoard(int newRow, int newCol, int oldRow, int oldCol, Piece movedPiece) {
+            currBoardState[newRow][newCol] = movedPiece;
+            currBoardState[oldRow][oldCol] = null;
+        }
+
     }
+
+    public int getMovedPiecePosition() {
+        return board.movedPiecePosition;
+    }
+
+    public static void setMovedPiecePosition(int position) {
+        board.movedPiecePosition = position;
+    }
+
+    public static void setMovedPieceOldPosition(int position) {
+        board.movedPieceOldPosition = position;
+    }
+
+    
 }

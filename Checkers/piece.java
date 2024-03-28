@@ -5,10 +5,16 @@ import java.awt.Graphics;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import Checkers.board;
 
 import javax.swing.*;
 
 public class piece {
+
+    /*
+     * Fix piece movement when it reaches edge, create instance var that says what direction it can move, change it when it reaches edge
+     */
+
 
     public static void main(String args[]) {
         return;
@@ -41,9 +47,9 @@ public class piece {
         //create the piece based on the player piece is for
         public Piece(int player, int position) {
             this.player = player;
-            this.shape = createCircle(player, 50, 50);
             this.currPosition = position;
             this.prevPosition = position;
+            this.shape = createCircle(player, 50, 50, position);
             this.moveList = new ArrayList<>();
         }
 
@@ -52,14 +58,14 @@ public class piece {
          */
 
         //create the circle based on which player piece is for
-        private CircleButton createCircle(int player, int xCoord, int yCoord) {
+        private CircleButton createCircle(int player, int xCoord, int yCoord, int position) {
             Color colorOfPiece;
             if (player == 1) {
                 colorOfPiece = COLOR1;
             } else {
                 colorOfPiece = COLOR2;
             }
-            CircleButton circle = new CircleButton(xCoord, yCoord, RADIUS, colorOfPiece);
+            CircleButton circle = new CircleButton(xCoord, yCoord, RADIUS, colorOfPiece, position);
             circle.setOpaque(false);
             circle.setEnabled(false);
             circle.setBorderPainted(false);
@@ -127,11 +133,17 @@ public class piece {
                     }
                     
                     if ((xDiff > -50 && xDiff < 50) && (yChangeCorrect)) {
+                        int pieceNewRow = startXCoord / 100;
+                        int pieceNewCol = ((startYCoord + yChange) / 100) * 8;
                         circle.setBounds(startXCoord, startYCoord + yChange, 100, 100);
                         //change position of piece
+                        board.setMovedPiecePosition(pieceNewRow + pieceNewCol);
+                        board.setMovedPieceOldPosition((startXCoord / 100) + ((startYCoord / 100) * 8));
+                        Piece.this.currPosition = pieceNewRow + pieceNewCol;
                     } else {
                         circle.setBounds(startXCoord, startYCoord, 100, 100);
                     }
+                    
                 }
             });
         }
@@ -179,14 +191,16 @@ public class piece {
          */
         private class CircleButton extends JButton {
 
-            private int x, y, radius;
+            private int x, y, radius, currPosition, prevPosition;
             private Color playerColor;
 
-            public CircleButton(int x, int y, int radius, Color playerColor) {
+            public CircleButton(int x, int y, int radius, Color playerColor, int position) {
                 this.x = x;
                 this.y = y;
                 this.radius = radius;
                 this.playerColor = playerColor;
+                this.currPosition = position;
+                this.prevPosition = position;
             }
 
             public int getPlayer() {
