@@ -5,7 +5,6 @@ import java.awt.Graphics;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
-import Checkers.board;
 
 import javax.swing.*;
 
@@ -29,6 +28,7 @@ public class piece {
 
         private int player;
         private CircleButton shape;
+        private boolean king;
 
         //position is index on board: position / 8 = row; position % 8 = col
         //once board uses prevPosition, reset it to currPosition
@@ -37,8 +37,7 @@ public class piece {
 
         //add list that says which spaces piece can move to using 1 move
         //items in arr will be offset of space based off curr position:
-            //ex, piece on 50, item in arr is -8, piece can move to 50 - 8 = 42 (row = 42 / 8, col = 42 % 8)
-        
+            //ex, piece on 50, item in arr is 42, piece can move to 42 (row = 42 / 8, col = 42 % 8)
         private ArrayList<Integer> moveList;
 
         /*
@@ -51,11 +50,22 @@ public class piece {
             this.prevPosition = position;
             this.shape = createCircle(player, 50, 50, position);
             this.moveList = new ArrayList<>();
+            this.king = false;
+            initMoveList(position, player);
         }
 
         /*
          * PRIVATE METHODS
-         */
+        */
+
+        //initialize moveList, only peices not in first as last row can move on first turn
+        private void initMoveList(int position, int player) {
+            if (player == 1 && position > 7) {
+                this.moveList.add(8 + position);
+            } else if (player == 2 && position < 55) {
+                this.moveList.add(-8 + position);
+            }
+        }
 
         //create the circle based on which player piece is for
         private CircleButton createCircle(int player, int xCoord, int yCoord, int position) {
@@ -65,12 +75,18 @@ public class piece {
             } else {
                 colorOfPiece = COLOR2;
             }
-            CircleButton circle = new CircleButton(xCoord, yCoord, RADIUS, colorOfPiece, position);
+            CircleButton circle = new CircleButton(xCoord, yCoord, RADIUS, colorOfPiece);
             circle.setOpaque(false);
             circle.setEnabled(false);
             circle.setBorderPainted(false);
             addMouseEventListener(circle);
             return circle;
+        }
+
+        //check if move is valid
+        private boolean isValidMove(int movePosition) {
+            //check if movePosition is in moveList
+            return moveList.contains(movePosition);
         }
 
         private void addMouseEventListener(CircleButton circle) {
@@ -92,6 +108,10 @@ public class piece {
                 private int startYCoord;
                 private int endXCoord;
                 private int endYCoord;
+                private int pieceOldRow;
+                private int pieceOldCol;
+                private int pieceNewRow;
+                private int pieceNewCol;
 
                 //add check to see if piece can move other direction when at end of board
 
@@ -99,6 +119,8 @@ public class piece {
                 public void mousePressed(MouseEvent e) {
                     startXCoord = circle.getX();
                     startYCoord = circle.getY();
+                    pieceOldRow = startXCoord / 100;
+                    pieceOldCol = startYCoord / 100 * 8;
                 }
 
 
@@ -131,19 +153,24 @@ public class piece {
                         yChangeCheckLo = 50;
                         yChangeCorrect = yDiff < yChangeCheckHi && yDiff > yChangeCheckLo;
                     }
-                    
-                    if ((xDiff > -50 && xDiff < 50) && (yChangeCorrect)) {
-                        int pieceNewRow = startXCoord / 100;
-                        int pieceNewCol = ((startYCoord + yChange) / 100) * 8;
-                        circle.setBounds(startXCoord, startYCoord + yChange, 100, 100);
+                    pieceNewRow = startXCoord / 100;
+                    pieceNewCol = ((startYCoord + yChange) / 100) * 8;
+                    if ((xDiff > -50 && xDiff < 50) && (yChangeCorrect) && isValidMove(pieceNewRow + pieceNewCol)) {
                         //change position of piece
-                        board.setMovedPiecePosition(pieceNewRow + pieceNewCol);
-                        board.setMovedPieceOldPosition((startXCoord / 100) + ((startYCoord / 100) * 8));
-                        Piece.this.currPosition = pieceNewRow + pieceNewCol;
+                        movePieceOnBoard(yChange, 0);
                     } else {
                         circle.setBounds(startXCoord, startYCoord, 100, 100);
                     }
-                    
+                }
+
+                //move piece on board
+                //implement xChange when it moves over enemy piece
+                private void movePieceOnBoard(int yChange, int xChange) {
+                    circle.setBounds(startXCoord, startYCoord + yChange, 100, 100);
+                    board.setMovedPiecePosition(pieceNewRow + pieceNewCol);
+                    board.setMovedPieceOldPosition((startXCoord / 100) + ((startYCoord / 100) * 8));
+                    Piece.this.currPosition = pieceNewRow + pieceNewCol;
+                    Piece.this.prevPosition = pieceOldRow + pieceOldCol;
                 }
             });
         }
@@ -185,22 +212,24 @@ public class piece {
             this.moveList.clear();
         }
 
+        public ArrayList<Integer> getMoveList() {
+            return this.moveList;
+        }
+
 
         /*
          * PRIVATE CLASSES
          */
         private class CircleButton extends JButton {
 
-            private int x, y, radius, currPosition, prevPosition;
+            private int x, y, radius;
             private Color playerColor;
 
-            public CircleButton(int x, int y, int radius, Color playerColor, int position) {
+            public CircleButton(int x, int y, int radius, Color playerColor) {
                 this.x = x;
                 this.y = y;
                 this.radius = radius;
                 this.playerColor = playerColor;
-                this.currPosition = position;
-                this.prevPosition = position;
             }
 
             public int getPlayer() {

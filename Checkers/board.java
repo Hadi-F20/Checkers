@@ -2,9 +2,13 @@ package Checkers;
 
 //TODO:
 /*
-  Add piece movement
-    swap it with the blank piece it collided with (is pieces x and y between other pieces x and y + width and height)
-  Add rules
+  movement works, cant move if there is piece in front
+  need to add jumps if piece forward diagonal is enemy and space to jump to is open
+  if you have a jump available you have to jump
+  add turn tracker, if you moved a piece or did all jumps possible end turn
+  if piece reaches end, make it a king so it can jump backwards
+    king can jump diagonally forward and backwards
+  add score tracker or something
  */
 
 import java.awt.Color;
@@ -15,8 +19,8 @@ import Checkers.piece.Piece;
 public class board {
 
     private static Board gameBoard;
-    private static int movedPiecePosition;
-    private static Integer movedPieceOldPosition;
+    private static volatile Integer movedPiecePosition = null;
+    private static volatile Integer movedPieceOldPosition = null;
 
     public static void main(String args[]) {
         gameBoard = new Board();
@@ -24,7 +28,8 @@ public class board {
             //loop through boardState to check collisions
             Piece[][] boardState = gameBoard.getBoardState();
             //need to get piece from original position
-            if ( movedPieceOldPosition != null) {
+
+            if (movedPieceOldPosition != null && movedPiecePosition != null) {
                 int pieceNewRow = movedPiecePosition / 8;
                 int pieceNewCol = movedPiecePosition % 8;
                 int pieceOldRow = movedPieceOldPosition / 8;
@@ -33,7 +38,6 @@ public class board {
                 gameBoard.checkPieceCollision(movedPiece);
                 gameBoard.updateBoard(pieceNewRow, pieceNewCol, pieceOldRow, pieceOldCol, movedPiece);
             }
-            
         }
     }
     public static class Board {
@@ -86,7 +90,6 @@ public class board {
                         frameBackground.add(newPiece.getCircle(), JLayeredPane.DEFAULT_LAYER);
                     } else {
                         //placeholder pieces to split gridlayout to correct order
-                        //use to see if piece can move here, if there is blankSquare button, then no player piece there
                         JButton blankSquare = new JButton();
                         blankSquare.setBounds(squareXPos, squareYPos, 100, 100);
                         blankSquare.setEnabled(false);
@@ -120,6 +123,35 @@ public class board {
 
         }
 
+        private void updateMoveList(Piece movedPiece) {
+            int row;
+            int col;
+            int rowToCheck;
+            Piece currPiece;
+            for (int i = 0; i < 8; i++) {
+                for (int j = 0; j < 8; j++) {
+                    currPiece = currBoardState[i][j];
+                    if (currPiece == null) {
+                        continue;
+                    }
+                    currPiece.clearMoveList();
+                    row = currPiece.getPositionList()[1] / 8;
+                    col = currPiece.getPositionList()[1] % 8;
+                    if (currPiece.getPlayer() == 1) {
+                        rowToCheck = row + 1;
+                    } else {
+                        rowToCheck = row - 1;
+                    }
+                    if (currBoardState[rowToCheck][col] == null) {
+                        int positionToCheck = (rowToCheck * 8) + col;
+                        currPiece.addToMoveList(positionToCheck);
+                    }
+
+                }
+            }
+            
+        }
+
         public Piece[][] getBoardState() {
             return this.currBoardState;
         }
@@ -128,6 +160,10 @@ public class board {
         public void updateBoard(int newRow, int newCol, int oldRow, int oldCol, Piece movedPiece) {
             currBoardState[newRow][newCol] = movedPiece;
             currBoardState[oldRow][oldCol] = null;
+            movedPiece.clearMoveList();
+            updateMoveList(movedPiece);
+            setMovedPieceOldPosition(null);
+            setMovedPiecePosition(null);
         }
 
     }
@@ -136,13 +172,20 @@ public class board {
         return board.movedPiecePosition;
     }
 
-    public static void setMovedPiecePosition(int position) {
+    public static void setMovedPiecePosition(Integer position) {
         board.movedPiecePosition = position;
     }
 
-    public static void setMovedPieceOldPosition(int position) {
+    public static void setMovedPieceOldPosition(Integer position) {
         board.movedPieceOldPosition = position;
     }
 
+    public static Integer getMovePieceOldPositon() {
+        return board.movedPieceOldPosition;
+    }
+
+    public static Integer getMovedPiecePositon() {
+        return board.movedPiecePosition;
+    }
     
 }
