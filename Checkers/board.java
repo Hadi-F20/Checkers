@@ -9,11 +9,15 @@ package Checkers;
   if piece reaches end, make it a king so it can jump backwards
     king can jump diagonally forward and backwards
   add score tracker or something
+
+  Some jumps not working, like green pos 14 cant jump if red is in the jumpable square, 21 i think
  */
 
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.GridLayout;
 import javax.swing.*;
+
 import Checkers.piece.Piece;
 
 public class board {
@@ -21,9 +25,11 @@ public class board {
     private static Board gameBoard;
     private static volatile Integer movedPiecePosition = null;
     private static volatile Integer movedPieceOldPosition = null;
+    private static int currPlayer;
 
     public static void main(String args[]) {
         gameBoard = new Board();
+        currPlayer = 1;
         while (true) {
             //loop through boardState to check collisions
             Piece[][] boardState = gameBoard.getBoardState();
@@ -35,7 +41,6 @@ public class board {
                 int pieceOldRow = movedPieceOldPosition / 8;
                 int pieceOldCol = movedPieceOldPosition % 8;
                 Piece movedPiece = boardState[pieceOldRow][pieceOldCol];
-                gameBoard.checkPieceCollision(movedPiece);
                 gameBoard.updateBoard(pieceNewRow, pieceNewCol, pieceOldRow, pieceOldCol, movedPiece);
             }
         }
@@ -109,20 +114,6 @@ public class board {
             frame.setVisible(true);
         }
 
-        //Check if piece move caused in to move over other players piece
-        private void checkPieceCollision(Piece movedPiece) {
-            //if piece moved, see if there is enemy piece between prev position and new position
-            //if so delete enemy piece
-            //if piece can go over another enemy let player move again
-            int[] positions = movedPiece.getPositionList();
-            int prevPosition = positions[0];
-            int currPosition = positions[1];
-            if (Math.abs((currPosition / 8) - (prevPosition / 8)) == 1) {
-                System.out.println("yes");
-            }
-
-        }
-
         private void updateMoveList(Piece movedPiece) {
             int row;
             int col;
@@ -135,9 +126,12 @@ public class board {
                         continue;
                     }
                     currPiece.clearMoveList();
-                    row = currPiece.getPositionList()[1] / 8;
-                    col = currPiece.getPositionList()[1] % 8;
-                    if (currPiece.getPlayer() == 1) {
+                    int currPlayer = currPiece.getPlayer();
+                    int currPosition = currPiece.getPositionList()[1];
+                    int enemyPlayer = currPlayer == 1 ? 2 : 1;
+                    row = currPosition / 8;
+                    col = currPosition % 8;
+                    if (currPlayer == 1) {
                         rowToCheck = row + 1;
                     } else {
                         rowToCheck = row - 1;
@@ -146,11 +140,48 @@ public class board {
                         int positionToCheck = (rowToCheck * 8) + col;
                         currPiece.addToMoveList(positionToCheck);
                     }
-
+                    checkJumps(currPiece, currPlayer, enemyPlayer, rowToCheck, col);
                 }
             }
             
         }
+
+
+        //IMPLEMENT OTHER PLAYER
+        private void checkJumps(Piece currPiece, int player, int enemyPlayer, int rowToCheck, int currCol) {
+            if ((rowToCheck + 1 > 7 || rowToCheck - 1 < 0) || (currCol <= 1 || currCol >= 6)) {
+                return;
+            }
+            if (currBoardState[rowToCheck][currCol + 1] == null && currBoardState[rowToCheck][currCol - 1] == null) {
+                return;
+            }
+            if (player == 1) {
+                if (currBoardState[rowToCheck][currCol + 1] != null && currBoardState[rowToCheck][currCol + 1].getPlayer() == enemyPlayer && currBoardState[rowToCheck + 1][currCol + 2] == null) {
+                    currPiece.addToMoveList(((rowToCheck + 1) * 8) + currCol + 2);
+                }
+                if (currBoardState[rowToCheck][currCol - 1] != null && currBoardState[rowToCheck][currCol - 1].getPlayer() == enemyPlayer && currBoardState[rowToCheck + 1][currCol - 2] == null) {
+                    currPiece.addToMoveList(((rowToCheck + 1) * 8) + currCol - 2);
+                }
+            } else {
+                if (currBoardState[rowToCheck][currCol + 1] != null && currBoardState[rowToCheck][currCol + 1].getPlayer() == enemyPlayer && currBoardState[rowToCheck - 1][currCol + 2] == null) {
+                    currPiece.addToMoveList(((rowToCheck - 1) * 8) + currCol + 2);
+                }
+                if (currBoardState[rowToCheck][currCol - 1] != null && currBoardState[rowToCheck][currCol - 1].getPlayer() == enemyPlayer && currBoardState[rowToCheck - 1][currCol - 2] == null) {
+                    currPiece.addToMoveList(((rowToCheck - 1) * 8) + currCol - 2);
+                }
+            }
+            
+        }
+
+        private void removeJumpedPiece(int row, int col) {
+            JButton pieceToRemove = currBoardState[row][col].getCircle();
+            frameBackground.remove((Component) pieceToRemove);
+            frameBackground.repaint();
+            //pieceToRemove.setEnabled(false);
+            //pieceToRemove.setVisible(false);
+            currBoardState[row][col] = null;
+        }
+
 
         public Piece[][] getBoardState() {
             return this.currBoardState;
@@ -158,16 +189,34 @@ public class board {
 
         //take a position, move piece in that position to new position
         public void updateBoard(int newRow, int newCol, int oldRow, int oldCol, Piece movedPiece) {
+            int jumpRow;
+            int jumpCol;
+            if (!movedPiece.isKing()) {
+                jumpRow = currPlayer == 1 ? newRow - 1 : newRow + 1;
+                jumpCol = newCol > oldCol ? oldCol + 1 : oldCol - 1;
+            } else {
+                //NOT IMPLEMENTED YET!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+                jumpRow = 0;
+                jumpCol = 0;
+            }
+            if (Math.abs(newRow - oldRow) == 2) {
+                removeJumpedPiece(jumpRow, jumpCol);
+            }
             currBoardState[newRow][newCol] = movedPiece;
             currBoardState[oldRow][oldCol] = null;
             movedPiece.clearMoveList();
             updateMoveList(movedPiece);
             setMovedPieceOldPosition(null);
             setMovedPiecePosition(null);
+            currPlayer = currPlayer == 1 ? 2 : 1;
         }
 
     }
 
+
+    /*
+     * Setters and Getters
+     */
     public int getMovedPiecePosition() {
         return board.movedPiecePosition;
     }
@@ -186,6 +235,10 @@ public class board {
 
     public static Integer getMovedPiecePositon() {
         return board.movedPiecePosition;
+    }
+
+    public static int getCurrPlayer() {
+        return board.currPlayer;
     }
     
 }

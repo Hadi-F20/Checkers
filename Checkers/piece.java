@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import javax.swing.*;
 
 public class piece {
-
     /*
      * Fix piece movement when it reaches edge, create instance var that says what direction it can move, change it when it reaches edge
      */
@@ -96,6 +95,9 @@ public class piece {
                 @Override
                 public void mouseDragged(MouseEvent e) {
                     //to drag pieces
+                    if (Piece.this.player != board.getCurrPlayer()) {
+                        return;
+                    }
                     int newXCoord = e.getX() + circle.getX() - 50;
                     int newYCoord = e.getY() + circle.getY() - 50;
                     circle.setBounds(newXCoord, newYCoord, 100, 100);
@@ -133,44 +135,35 @@ public class piece {
                     int xDiff = endXCoord - startXCoord;
                     int yDiff = endYCoord - startYCoord;
                     int yChange = 0;
-                    int yChangeCheckHi;
-                    int yChangeCheckLo;
-                    boolean yChangeCorrect = false;
+                    int xChange = 0;
                     
                     //Check which player piece is for
                     //for p1: move should be downwards, so y must be getting bigger. if yChange > 50 && < 150, valid move
                     //if piece is at last square (y == 700), then can move backwards, so check is same as normal check for other player
                     //same thing but opposite for p2
-                    
-                    if (startYCoord >= 700 || player == 2) {
-                        yChange = -100;
-                        yChangeCheckHi = -150;
-                        yChangeCheckLo = -50;
-                        yChangeCorrect = yDiff > yChangeCheckHi && yDiff < yChangeCheckLo;
-                    } else if (startYCoord <= 100 || player == 1) {
-                        yChange = 100;
-                        yChangeCheckHi = 150;
-                        yChangeCheckLo = 50;
-                        yChangeCorrect = yDiff < yChangeCheckHi && yDiff > yChangeCheckLo;
-                    }
-                    pieceNewRow = startXCoord / 100;
+                    yChange = (int) Math.round(yDiff / 100.0) * 100;
+                    xChange = (int) Math.round(xDiff / 100.0) * 100;
+                    pieceNewRow = (startXCoord + xChange) / 100;
                     pieceNewCol = ((startYCoord + yChange) / 100) * 8;
-                    if ((xDiff > -50 && xDiff < 50) && (yChangeCorrect) && isValidMove(pieceNewRow + pieceNewCol)) {
+                    if (isValidMove(pieceNewRow + pieceNewCol)) {
                         //change position of piece
-                        movePieceOnBoard(yChange, 0);
+                        movePieceOnBoard(yChange, xChange);
                     } else {
                         circle.setBounds(startXCoord, startYCoord, 100, 100);
                     }
                 }
 
+                
+
                 //move piece on board
                 //implement xChange when it moves over enemy piece
                 private void movePieceOnBoard(int yChange, int xChange) {
-                    circle.setBounds(startXCoord, startYCoord + yChange, 100, 100);
+                    circle.setBounds(startXCoord + xChange, startYCoord + yChange, 100, 100);
                     board.setMovedPiecePosition(pieceNewRow + pieceNewCol);
                     board.setMovedPieceOldPosition((startXCoord / 100) + ((startYCoord / 100) * 8));
                     Piece.this.currPosition = pieceNewRow + pieceNewCol;
                     Piece.this.prevPosition = pieceOldRow + pieceOldCol;
+                    
                 }
             });
         }
@@ -214,6 +207,10 @@ public class piece {
 
         public ArrayList<Integer> getMoveList() {
             return this.moveList;
+        }
+
+        public boolean isKing() {
+            return this.king;
         }
 
 
