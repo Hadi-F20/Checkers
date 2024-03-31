@@ -38,6 +38,8 @@ public class piece {
         //items in arr will be offset of space based off curr position:
             //ex, piece on 50, item in arr is 42, piece can move to 42 (row = 42 / 8, col = 42 % 8)
         private ArrayList<Integer> moveList;
+        //if jumpList isnt empty then have to take a jump
+        private ArrayList<Integer> jumpList;
 
         /*
          * CONSTRUCTORS
@@ -45,11 +47,12 @@ public class piece {
         //create the piece based on the player piece is for
         public Piece(int player, int position) {
             this.player = player;
+            this.king = false;
             this.currPosition = position;
             this.prevPosition = position;
-            this.shape = createCircle(player, 50, 50, position);
+            this.shape = createCircle(player, 50, 50);
             this.moveList = new ArrayList<>();
-            this.king = false;
+            this.jumpList = new ArrayList<>();
             initMoveList(position, player);
         }
 
@@ -59,15 +62,25 @@ public class piece {
 
         //initialize moveList, only peices not in first as last row can move on first turn
         private void initMoveList(int position, int player) {
-            if (player == 1 && position > 7) {
-                this.moveList.add(8 + position);
-            } else if (player == 2 && position < 55) {
-                this.moveList.add(-8 + position);
+            if (player == 1 && position < 55) {
+                if (position >= 48 && position < 55) {
+                    this.moveList.add(-7 + position);
+                }
+                if (position > 48 && position <= 55) {
+                    this.moveList.add(-9 + position);
+                }
+            } else if (player == 2 && position > 7) {
+                if (position >= 8 && position < 15) {
+                    this.moveList.add(9 + position);
+                }
+                if (position > 8 && position <= 15) {
+                    this.moveList.add(7 + position);
+                }           
             }
         }
 
         //create the circle based on which player piece is for
-        private CircleButton createCircle(int player, int xCoord, int yCoord, int position) {
+        private CircleButton createCircle(int player, int xCoord, int yCoord) {
             Color colorOfPiece;
             if (player == 1) {
                 colorOfPiece = COLOR1;
@@ -75,6 +88,10 @@ public class piece {
                 colorOfPiece = COLOR2;
             }
             CircleButton circle = new CircleButton(xCoord, yCoord, RADIUS, colorOfPiece);
+            if (this.isKing()) {
+                circle.setText("King");
+                circle.setForeground(Color.ORANGE);
+            }
             circle.setOpaque(false);
             circle.setEnabled(false);
             circle.setBorderPainted(false);
@@ -86,6 +103,10 @@ public class piece {
         private boolean isValidMove(int movePosition) {
             //check if movePosition is in moveList
             return moveList.contains(movePosition);
+        }
+
+        private boolean isValidJump(int movePosition) {
+            return jumpList.contains(movePosition);
         }
 
         private void addMouseEventListener(CircleButton circle) {
@@ -114,6 +135,7 @@ public class piece {
                 private int pieceOldCol;
                 private int pieceNewRow;
                 private int pieceNewCol;
+                private int player;
 
                 //add check to see if piece can move other direction when at end of board
 
@@ -129,23 +151,18 @@ public class piece {
                 @Override
                 public void mouseReleased(MouseEvent e) {
                     //when released, see if piece ended in different square
-                    int player = circle.getPlayer();
+                    player = Piece.this.getPlayer();
                     endXCoord = circle.getX();
                     endYCoord = circle.getY();
                     int xDiff = endXCoord - startXCoord;
                     int yDiff = endYCoord - startYCoord;
-                    int yChange = 0;
-                    int xChange = 0;
-                    
-                    //Check which player piece is for
-                    //for p1: move should be downwards, so y must be getting bigger. if yChange > 50 && < 150, valid move
-                    //if piece is at last square (y == 700), then can move backwards, so check is same as normal check for other player
-                    //same thing but opposite for p2
-                    yChange = (int) Math.round(yDiff / 100.0) * 100;
-                    xChange = (int) Math.round(xDiff / 100.0) * 100;
+                    int yChange = (int) Math.round(yDiff / 100.0) * 100;
+                    int xChange = (int) Math.round(xDiff / 100.0) * 100;
                     pieceNewRow = (startXCoord + xChange) / 100;
                     pieceNewCol = ((startYCoord + yChange) / 100) * 8;
-                    if (isValidMove(pieceNewRow + pieceNewCol)) {
+                    if (isValidJump(pieceNewRow + pieceNewCol)) {
+                        movePieceOnBoard(yChange, xChange);
+                    } else if (!board.isJumpAvailable() && isValidMove(pieceNewRow + pieceNewCol)) {
                         //change position of piece
                         movePieceOnBoard(yChange, xChange);
                     } else {
@@ -153,17 +170,18 @@ public class piece {
                     }
                 }
 
-                
-
-                //move piece on board
-                //implement xChange when it moves over enemy piece
+                //move piece on board based on coord change
                 private void movePieceOnBoard(int yChange, int xChange) {
                     circle.setBounds(startXCoord + xChange, startYCoord + yChange, 100, 100);
                     board.setMovedPiecePosition(pieceNewRow + pieceNewCol);
                     board.setMovedPieceOldPosition((startXCoord / 100) + ((startYCoord / 100) * 8));
                     Piece.this.currPosition = pieceNewRow + pieceNewCol;
                     Piece.this.prevPosition = pieceOldRow + pieceOldCol;
-                    
+                    if (!Piece.this.isKing()) {
+                        if ((player == 1 && (pieceNewRow + pieceNewCol) < 8) || (player == 2 && (pieceNewRow + pieceNewCol) > 55)) {
+                            setPieceToKing();
+                        }
+                    }          
                 }
             });
         }
@@ -201,8 +219,13 @@ public class piece {
             this.moveList.add(spaceCanMoveTo);
         }
 
+        public void addToJumpList(int jumpPosition) {
+            this.jumpList.add(jumpPosition);
+        }
+
         public void clearMoveList() {
             this.moveList.clear();
+            this.jumpList.clear();
         }
 
         public ArrayList<Integer> getMoveList() {
@@ -211,6 +234,14 @@ public class piece {
 
         public boolean isKing() {
             return this.king;
+        }
+
+        public boolean isJumpListEmpty() {
+            return this.jumpList.isEmpty();
+        }
+
+        public void setPieceToKing() {
+            this.king = true; 
         }
 
 
@@ -227,14 +258,6 @@ public class piece {
                 this.y = y;
                 this.radius = radius;
                 this.playerColor = playerColor;
-            }
-
-            public int getPlayer() {
-                if (playerColor.equals(COLOR1)) {
-                    return 1;
-                } else {
-                    return 2;
-                }
             }
 
             @Override
